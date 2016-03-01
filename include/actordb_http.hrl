@@ -1,0 +1,2 @@
+-define(REPLY(S,C,R), actordb_http_util:reply(S,C,R)).
+-define(REPLY(S,H,C,R), actordb_http_util:reply(S,H,C,R)).
