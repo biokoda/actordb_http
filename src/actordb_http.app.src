@@ -1,0 +1,12 @@
+% This Source Code Form is subject to the terms of the Mozilla Public
+% License, v. 2.0. If a copy of the MPL was not distributed with this
+% file, You can obtain one at http://mozilla.org/MPL/2.0/.
+{application, actordb_http,
+ [{description, "ActorDB HTTP API"},
+  {vsn, "0.0.1"},
+  {modules, [ ]},
+  {registered, [ ]},
+  {mod, {actordb_http, [ ]}},
+  {applications, [kernel, stdlib]},
+  {start_phases,[ ]}
+ ]}.
