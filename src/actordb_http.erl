@@ -62,6 +62,7 @@ dispatch_rules() ->
     [{'_',[
       {"/v1/_db/:actor_type[/:actor_table]", actordb_http_req, [db]},
       {"/v1/_db", actordb_http_req, [db]},
+      {"/v1/q/:exec_type", actordb_http_req, [exec]},
       {"/[...]", actordb_http_req, []}
     ]}],
   cowboy_router:compile(Rules).

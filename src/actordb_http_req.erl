@@ -23,7 +23,7 @@ init(Req, Opts) ->
   Path = cowboy_req:path(Req),
   Peer = cowboy_req:peer(Req),
   State = #req_state{ path = Path, peer = Peer, opts = Opts },
-  lager:debug("~p ~s processing.",[State#req_state.peer, State#req_state.path]),
+  lager:debug("~p ~s processing, opts: ~p",[State#req_state.peer, State#req_state.path, State#req_state.opts]),
   {cowboy_rest, Req, State}.
 
 terminate(_Reason, _Req, _State) ->
@@ -61,18 +61,24 @@ content_types_provided(Req, State) ->
   {Provided, Req, State}.
 
 from_json(Req, State) ->
-  lager:info("from json ~p",[State]),
+  lager:debug("from json ~p",[State]),
 	{ok, Body, Req1} = cowboy_req:body(Req),
-	Json = jiffy:decode(Body),
-	Reply = actordb_http_json:handle_req(Json, Req1, State),
-	Req2 = cowboy_req:set_resp_body(Reply, Req1),
-  {true, Req2, State}.
+	Json = jiffy:decode(Body,[return_maps]),
+	case actordb_http_json:handle_req(Json, Req1, State) of
+    {error, _} ->
+      Req2 = ?REPLY(400, <<>>, Req1),
+      {stop, Req2, State};
+    {reply, Reply} ->
+      JsonReply = jiffy:encode(Reply),
+      Req2 = cowboy_req:set_resp_body(JsonReply, Req1),
+      {true, Req2, State}
+  end.
 
 to_json(Req, State) ->
-  lager:info("to json ~p",[State]),
+  lager:debug("to json ~p",[State]),
 	case actordb_http_json:handle_resp(Req, State) of
     {error, _} ->
-      Req1 = ?REPLY(500, <<>>, Req),
+      Req1 = ?REPLY(400, <<>>, Req),
       {stop, Req1, State};
     {reply, Reply} ->
       JsonReply = jiffy:encode(Reply),

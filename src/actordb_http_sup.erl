@@ -28,7 +28,7 @@ init([]) ->
   {ok, {SupFlags, ChildSpecs}}.
 
 ensure_pool(Username, Password) ->
-  lager:debug("ensure pool for ~p",[Username]),
+%  lager:debug("ensure pool for ~p",[Username]),
   case ets:lookup(?ADB_HTTPAUTH_ETS,{Username, Password}) of
     [{{Username, Password},true}] ->
       true;
@@ -42,7 +42,7 @@ pool_for(Username) ->
   pool_for(butil:tobin(Username)).
 
 start_pool(Username, Password) ->
-  lager:debug("setting up pool for ~p",[Username]),
+%  lager:debug("setting up pool for ~p",[Username]),
   case catch handle_login(Username, Password) of
     true ->
       ets:insert(?ADB_HTTPAUTH_ETS, {{Username, Password}, true}),
@@ -60,7 +60,7 @@ start_pool(Username, Password) ->
       {ok, _} = supervisor:start_child(whereis(?MODULE), ChildSpec),
       true;
     _X ->
-      io:format("state: ~p",[_X]),
+%      io:format("state: ~p",[_X]),
       {error, invalid_login}
   end.
 
