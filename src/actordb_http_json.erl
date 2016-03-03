@@ -54,12 +54,12 @@ exec_sql(#{<<"q">> := Sql}, Pool) ->
   build_response(R, fun(SR) ->
     case SR of
       #{ last_change_rowid := LastId, rows_changed := NChanged} ->
-        #{ <<"result">> => [
-          #{<<"last_change_rowid">> => LastId},
-          #{<<"rows_changed">> => NChanged }
-        ]};
-      #{ rows := Rows } ->
-        #{  <<"result">> => Rows }
+        #{ <<"result">> => null,
+           <<"meta">> => [#{<<"last_change_rowid">> => LastId}, #{<<"rows_changed">> => NChanged}]
+          };
+      #{ rows := Rows, has_more := HasMore } ->
+        #{ <<"result">> => Rows,
+           <<"meta">> => [#{<<"has_more">> => HasMore}]}
     end
   end).
 
