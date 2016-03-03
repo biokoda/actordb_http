@@ -3,6 +3,8 @@
 % file, You can obtain one at http://mozilla.org/MPL/2.0/.
 -module(actordb_http).
 
+-include_lib("actordb_http/include/actordb_http.hrl").
+
 -behaviour(application).
 
 -export([start/2, stop/1]).
@@ -13,7 +15,8 @@ start(_, _) ->
       [begin
         start_http_listener(Iface)
       end || Iface <- HttpIfaces];
-    _ -> ok
+    _ ->
+      ok
   end,
   actordb_http_sup:start_link().
 
@@ -23,7 +26,8 @@ stop(_) ->
       [begin
         stop_http_listener(Iface)
       end || Iface <- HttpIfaces];
-    _ -> ok
+    _ ->
+      ok
   end,
   ok.
 
@@ -48,17 +52,16 @@ start_http_listener1({Interface, Port} = Id) ->
   lager:info("starting API http listener with id= ~p interface= ~p, port= ~p",[ListenerId, Interface, Port]),
   HttpOpts = [
     {port, Port},
-    {timeout, 4000},
-    {max_connections, 1000} ],
-  {ok, _} = cowboy:start_http(ListenerId, 10, HttpOpts, [{env, [{dispatch, dispatch_rules()}]} ]),
+    {timeout, 5000},
+    {max_connections, 1000}],
+  {ok, _} = cowboy:start_http(ListenerId, 10, HttpOpts, [{env, [{dispatch, dispatch_rules()} ]}, {max_keepalive, 1000}]),
   ok.
 
 dispatch_rules() ->
   Rules =
     [{'_',[
-      {"/_db/:actor_type/:actor_table", actordb_http_db, []},
-      {"/_db/:actor_type", actordb_http_db, []},
-      {"/_db", actordb_http_db, []},
+      {"/v1/_db/:actor_type[/:actor_table]", actordb_http_req, [db]},
+      {"/v1/_db", actordb_http_req, [db]},
       {"/[...]", actordb_http_req, []}
     ]}],
   cowboy_router:compile(Rules).

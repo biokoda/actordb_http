@@ -8,3 +8,4 @@ ebin
 .concrete/DEV_MODE
 .rebar
 rebar
+.DS_Store

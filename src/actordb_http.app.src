@@ -7,6 +7,6 @@
   {modules, [ ]},
   {registered, [ ]},
   {mod, {actordb_http, [ ]}},
-  {applications, [kernel, stdlib, cowboy]},
+  {applications, [kernel, stdlib, cowboy, poolboy]},
   {start_phases,[ ]}
  ]}.
