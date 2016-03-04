@@ -15,6 +15,8 @@ handle_req(Json, Req, #req_state{ pool = Pool, opts = [exec]}) ->
   Binding = cowboy_req:binding(exec_type, Req, undefined),
   lager:debug("exec binding: ~p", [Binding]),
   exec(Binding, Json, Pool);
+%
+%
 handle_req(_, _, _) ->
   {error, unknown}.
 
@@ -45,23 +47,54 @@ db(ActorType, ActorTable, Pool) ->
 %% @private
 exec(<<"exec">>, Json, Pool) ->
   exec_sql(Json, Pool);
+exec(<<"exec_single">>, Json, Pool) ->
+  exec_single(Json, Pool);
+exec(<<"exec_single_param">>, Json, Pool) ->
+  exec_single_param(Json, Pool);
 exec(Typ, _, _) ->
   {error, {bad_exec_type,Typ}}.
 
 exec_sql(#{<<"q">> := Sql}, Pool) ->
-  R = actordb_http_worker:exec_sql(Sql, Pool),
-  lager:info("reply: ~p",[R]),
+  lager:debug("exec_sql, q=~p",[Sql]),
+  R = actordb_http_worker:exec_sql(Sql, Pool,[blob2base64]),
+  query_response(R);
+exec_sql(_,_) ->
+  {error, bad_exec_data}.
+
+exec_single(#{<<"id">> := Actor, <<"flags">> := Flags, <<"type">> := Type, <<"q">> := Sql}, Pool) ->
+  lager:debug("exec_single, id=~p flags=~p type=~p sql=~p",[Actor, Flags, Type, Sql]),
+  R = actordb_http_worker:exec_single(Actor, Type, Flags, Sql, Pool,[blob2base64]),
+  query_response(R);
+exec_single(_,_) ->
+  {error, bad_exec_single_data}.
+
+exec_single_param(#{<<"id">> := Actor, <<"flags">> := Flags, <<"type">> := Type, <<"q">> := Sql, <<"p">> := BindingVals}, Pool) ->
+  lager:debug("exec_single_param, id=~p flags=~p type=~p bindings=~p sql=~p",[Actor, Flags, Type, BindingVals, Sql]),
+  R = actordb_http_worker:exec_single_param(Actor, Type, Flags, Sql, [BindingVals], Pool, [blob2base64]),
+  query_response(R);
+exec_single_param(_,_) ->
+  {error, bad_exec_single_param_data}.
+
+query_response(R) ->
+  lager:debug("reply=~p",[R]),
   build_response(R, fun(SR) ->
     case SR of
       #{ last_change_rowid := LastId, rows_changed := NChanged} ->
         #{ <<"result">> => null,
-           <<"meta">> => [#{<<"last_change_rowid">> => LastId}, #{<<"rows_changed">> => NChanged}]
+           <<"meta">> => [
+              #{<<"last_change_rowid">> => LastId},
+              #{<<"rows_changed">> => NChanged}
+            ]
           };
       #{ rows := Rows, has_more := HasMore } ->
         #{ <<"result">> => Rows,
-           <<"meta">> => [#{<<"has_more">> => HasMore}]}
+           <<"meta">> => [
+              #{<<"has_more">> => HasMore}
+            ]
+          }
     end
   end).
+
 
 %% @private
 % build_response(R) ->

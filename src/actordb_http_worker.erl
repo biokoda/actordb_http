@@ -13,7 +13,9 @@
 -export([actor_tables/2]).
 -export([actor_table_columns/3]).
 
--export([exec_sql/2]).
+-export([exec_sql/2, exec_sql/3]).
+-export([exec_single/5, exec_single/6]).
+-export([exec_single_param/6, exec_single_param/7]).
 
 -record(state, { user, bp }).
 
@@ -61,11 +63,22 @@ handle_call({actor_table_columns, ActorType, ActorTable}, _, State) ->
       Val
   end,
   {reply, ActorTableColumns, State};
-handle_call({exec_sql, Sql}, _, State) ->
+handle_call({exec_sql, Sql, Opts}, _, State) ->
   Bp = handle_bp(State),
   Result = (catch actordb:exec_bp(Bp, Sql)),
   lager:debug("sql :~p result: ~p",[Sql, Result]),
-  {reply, db_res(Sql, Result), State};
+  {reply, db_res(Sql, Result, Opts), State};
+
+handle_call({exec_single, Actor, Type, Flags, Sql, Opts}, _, State) ->
+  Bp = handle_bp(State),
+  Result = (catch actordb:exec_bp(Bp, Actor, Type, flags(Flags), Sql)),
+  {reply, db_res(Sql, Result, Opts), State};
+
+handle_call({exec_single_param, Actor, Type, Flags, Sql, BindingVals, Opts}, _, State) ->
+  Bp = handle_bp(State),
+  Result = (catch actordb:exec_bp(Bp, Actor, Type, flags(Flags), Sql, bindings(BindingVals))),
+  {reply, db_res(Sql, Result, Opts), State};
+
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
@@ -82,6 +95,28 @@ terminate(_Reason, #state{ bp = _State }) ->
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
+% statements level
+bindings(L) ->
+  lager:debug("L => ~p",[L]),
+  [bindings_q(X) || X <- L].
+
+% query level
+bindings_q(S) ->
+  [bindings_int(S1) || S1 <- S].
+
+% query values
+bindings_int(Q) ->
+  [bindval(I) || I <- Q].
+
+bindval(#{<<"type">> := <<"blob">>, <<"encoding">> := <<"base64">>, <<"value">> := V}) ->
+  {blob, base64:decode(V)};
+bindval(#{<<"type">> := <<"blob">>, <<"encoding">> := <<"none">>, <<"value">> := V}) ->
+  {blob, V};
+bindval(V) when is_map(V) ->
+  throw({error, {bad_bind_value, V}});
+bindval(V) ->
+  V.
+
 %%
 %%  API
 %%
@@ -96,7 +131,19 @@ actor_table_columns(ActorType, ActorTable, Pool) ->
   execute_call({actor_table_columns, ActorType, ActorTable}, Pool).
 
 exec_sql(Sql, Pool) ->
-  execute_call({exec_sql, Sql}, Pool).
+  exec_sql(Sql, Pool, []).
+exec_sql(Sql, Pool, Opts) ->
+  execute_call({exec_sql, Sql, Opts}, Pool).
+
+exec_single(Actor, Type, Flags, Sql, Pool) ->
+  exec_single(Actor, Type, Flags, Sql, Pool, []).
+exec_single(Actor, Type, Flags, Sql, Pool, Opts) ->
+  execute_call({exec_single, Actor, Type, Flags, Sql, Opts}, Pool).
+
+exec_single_param(Actor, Type, Flags, Sql, BindingVals, Pool) ->
+  exec_single_param(Actor, Type, Flags, Sql, BindingVals, Pool, []).
+exec_single_param(Actor, Type, Flags, Sql, BindingVals, Pool, Opts) ->
+  execute_call({exec_single_param, Actor, Type, Flags, Sql, BindingVals, Opts}, Pool).
 
 %% @private
 execute_call(Message, Pool) ->
@@ -115,42 +162,52 @@ handle_bp(#state{ bp = Bp} = State) ->
 	end.
 
 %% @private
-db_res(_Sql, {_WhatNow,{ok,[{columns,[]},{rows,[]}]}}) ->
+db_res(_Sql, {_WhatNow,{ok,[{columns,[]},{rows,[]}]}}, _) ->
 	Cols = [],
 	Rows = [#{}],
   #{ has_more => false, columns => Cols, rows => Rows };
-db_res(_Sql, {_WhatNow,{ok,[[_,_] = R|_]}}) ->
-	db_res(_Sql, {_WhatNow,{ok,R}});
-db_res(_Sql, {_WhatNow,{ok,[{columns,Cols1},{rows,Rows1}]}}) ->
+db_res(_Sql, {_WhatNow,{ok,[[_,_] = R|_]}}, Opts) ->
+	db_res(_Sql, {_WhatNow,{ok,R}}, Opts);
+db_res(_Sql, {_WhatNow,{ok,[{columns,Cols1},{rows,Rows1}]}}, Opts) ->
 	Cols = tuple_to_list(Cols1),
-	Rows = [maps:from_list(lists:zip(Cols,[val(Val) || Val <- tuple_to_list(R)])) || R <- lists:reverse(Rows1)],
+	Rows = [maps:from_list(lists:zip(Cols,[val(Val,Opts) || Val <- tuple_to_list(R)])) || R <- lists:reverse(Rows1)],
   #{ has_more => false, columns => Cols, rows => Rows };
-db_res(_Sql, {_WhatNow,{ok,{changes,LastId,NChanged}}}) ->
+db_res(_Sql, {_WhatNow,{ok,{changes,LastId,NChanged}}}, _) ->
   #{ last_change_rowid => LastId, rows_changed => NChanged};
-db_res(_Sql, {_WhatNow,{ok,[{changes,_,_} = H|_]}}) ->
-	db_res(_Sql, {_WhatNow,{ok,H}});
-db_res(_Sql,{ok,{sql_error,E}}) ->
-	db_res(_Sql,{sql_error,E});
-db_res(_Sql,{ok,{error,E}}) ->
-	db_res(_Sql,{error,E});
-db_res(_Sql, {'EXIT',_Exc}) ->
+db_res(_Sql, {_WhatNow,{ok,[{changes,_,_} = H|_]}}, Opts) ->
+	db_res(_Sql, {_WhatNow,{ok,H}}, Opts);
+db_res(_Sql,{ok,{sql_error,E}}, Opts) ->
+	db_res(_Sql,{sql_error,E}, Opts);
+db_res(_Sql,{ok,{error,E}}, Opts) ->
+	db_res(_Sql,{error,E}, Opts);
+db_res(_Sql, {'EXIT',_Exc}, _) ->
   {error, {internal, exception}};
-db_res(_Sql, Err) ->
+db_res(_Sql, Err, _) ->
   lager:error("execute exception: ~p~n",[Err]),
   {error, {internal, actordb_err_desc:desc(Err)}}.
 
 %% @private
-val({blob,V}) ->
-	V;
-val(undefined) ->
+val({blob,V}, Opts) ->
+  case lists:member(blob2base64, Opts) of
+    true ->
+      #{ <<"type">> => <<"blob">>, <<"encoding">> => <<"base64">>, <<"value">> => base64:encode(V)};
+    false ->
+      V
+  end;
+val(undefined,_) ->
 	null;
-val(true) ->
+val(true,_) ->
 	true;
-val(false) ->
+val(false,_) ->
 	false;
-val(V) when is_float(V) ->
+val(V,_) when is_float(V) ->
 	V;
-val(V) when is_binary(V); is_list(V) ->
+val(V,_) when is_binary(V); is_list(V) ->
 	V;
-val(V) when is_integer(V) ->
+val(V,_) when is_integer(V) ->
 	V.
+
+flags([H|T]) ->
+	actordb_sqlparse:check_flags(H,[])++flags(T);
+flags([]) ->
+	[].

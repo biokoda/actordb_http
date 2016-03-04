@@ -4,6 +4,7 @@
 -module(actordb_http).
 
 -include_lib("actordb_http/include/actordb_http.hrl").
+-include_lib("actordb_http/include/actordb_http_types.hrl").
 
 -behaviour(application).
 
@@ -63,6 +64,7 @@ dispatch_rules() ->
       {"/v1/_db/:actor_type[/:actor_table]", actordb_http_req, [db]},
       {"/v1/_db", actordb_http_req, [db]},
       {"/v1/q/:exec_type", actordb_http_req, [exec]},
+      {"/v1/r/:actor_type/:actor_id/:actor_table", actordb_http_req, [resource]},
       {"/[...]", actordb_http_req, []}
     ]}],
   cowboy_router:compile(Rules).
