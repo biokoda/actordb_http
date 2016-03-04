@@ -1,7 +1,7 @@
 % This Source Code Form is subject to the terms of the Mozilla Public
 % License, v. 2.0. If a copy of the MPL was not distributed with this
 % file, You can obtain one at http://mozilla.org/MPL/2.0/.
--module(actordb_http_json).
+-module(actordb_http_exec).
 
 -include_lib("actordb_http/include/actordb_http.hrl").
 
@@ -11,10 +11,10 @@
 %%
 %%  API
 %%
-handle_req(Json, Req, #req_state{ pool = Pool, opts = [exec]}) ->
+handle_req(Data, Req, #req_state{ pool = Pool, opts = [exec]}) ->
   Binding = cowboy_req:binding(exec_type, Req, undefined),
   lager:debug("exec binding: ~p", [Binding]),
-  exec(Binding, Json, Pool);
+  exec(Binding, Data, Pool);
 %
 %
 handle_req(_, _, _) ->
@@ -45,14 +45,14 @@ db(ActorType, ActorTable, Pool) ->
   end).
 
 %% @private
-exec(<<"exec">>, Json, Pool) ->
-  exec_sql(Json, Pool);
-exec(<<"exec_single">>, Json, Pool) ->
-  exec_single(Json, Pool);
-exec(<<"exec_single_param">>, Json, Pool) ->
-  exec_single_param(Json, Pool);
-exec(<<"exec_multi">>, Json, Pool) ->
-  exec_multi(Json, Pool);
+exec(<<"exec">>, Data, Pool) ->
+  exec_sql(Data, Pool);
+exec(<<"exec_single">>, Data, Pool) ->
+  exec_single(Data, Pool);
+exec(<<"exec_single_param">>, Data, Pool) ->
+  exec_single_param(Data, Pool);
+exec(<<"exec_multi">>, Data, Pool) ->
+  exec_multi(Data, Pool);
 exec(Typ, _, _) ->
   {error, {bad_exec_type,Typ}}.
 

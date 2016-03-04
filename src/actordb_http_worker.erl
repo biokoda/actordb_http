@@ -67,7 +67,7 @@ handle_call({actor_table_columns, ActorType, ActorTable}, _, State) ->
 handle_call({exec_sql, Sql, Opts}, _, State) ->
   Bp = handle_bp(State),
   Result = (catch actordb:exec_bp(Bp, Sql)),
-  lager:debug("sql :~p result: ~p",[Sql, Result]),
+%  lager:debug("sql :~p result: ~p",[Sql, Result]),
   {reply, db_res(Sql, Result, Opts), State};
 
 handle_call({exec_single, Actor, Type, Flags, Sql, Opts}, _, State) ->
@@ -103,7 +103,6 @@ code_change(_OldVsn, State, _Extra) ->
 
 % statements/query level
 bindings(L) ->
-  lager:debug("L => ~p",[L]),
   [bindings_q(X) || X <- L].
 
 % query-repeat level

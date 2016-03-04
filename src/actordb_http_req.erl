@@ -61,10 +61,9 @@ content_types_provided(Req, State) ->
   {Provided, Req, State}.
 
 from_json(Req, State) ->
-  lager:debug("from json ~p",[State]),
 	{ok, Body, Req1} = cowboy_req:body(Req),
 	Json = jiffy:decode(Body,[return_maps]),
-	case actordb_http_json:handle_req(Json, Req1, State) of
+	case actordb_http_exec:handle_req(Json, Req1, State) of
     {error, _} ->
       Req2 = ?REPLY(400, <<>>, Req1),
       {stop, Req2, State};
@@ -75,8 +74,7 @@ from_json(Req, State) ->
   end.
 
 to_json(Req, State) ->
-  lager:debug("to json ~p",[State]),
-	case actordb_http_json:handle_resp(Req, State) of
+	case actordb_http_exec:handle_resp(Req, State) of
     {error, _} ->
       Req1 = ?REPLY(400, <<>>, Req),
       {stop, Req1, State};
@@ -86,7 +84,32 @@ to_json(Req, State) ->
   end.
 
 from_msgpack(Req, State) ->
-  {stop, Req, State}.
+  {ok, BodyPacked, Req1} = cowboy_req:body(Req),
+  case msgpack:unpack(BodyPacked) of
+    {ok, Unpacked} ->
+      case actordb_http_exec:handle_req(Unpacked, Req1, State) of
+        {error, _} ->
+          Req2 = ?REPLY(400, <<>>, Req1),
+          {stop, Req2, State};
+        {reply, Reply} ->
+          MsgPacked = msgpack:pack(Reply),
+          Req2 = cowboy_req:set_resp_body(MsgPacked, Req1),
+          {true, Req2, State}
+      end;
+    {error, Reason} ->
+      lager:debug("error unpacking message=~p, reason=~p",[BodyPacked, Reason]),
+      Req2 = ?REPLY(400, <<>>, Req1),
+      {stop, Req2, State}
+  end.
+
+
 
 to_msgpack(Req, State) ->
-  {stop, Req, State}.
+  case actordb_http_exec:handle_resp(Req, State) of
+    {error, _} ->
+      Req1 = ?REPLY(400, <<>>, Req),
+      {stop, Req1, State};
+    {reply, Reply} ->
+      MsgPacked = msgpack:pack(Reply),
+      {MsgPacked, Req, State}
+  end.
