@@ -101,12 +101,12 @@ terminate(_Reason, #state{ bp = _State }) ->
 code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
-% statements level
+% statements/query level
 bindings(L) ->
   lager:debug("L => ~p",[L]),
   [bindings_q(X) || X <- L].
 
-% query level
+% query-repeat level
 bindings_q(S) ->
   [bindings_int(S1) || S1 <- S].
 

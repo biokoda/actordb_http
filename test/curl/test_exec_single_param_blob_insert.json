@@ -4,6 +4,8 @@
   "flags":["create"],
 	"q":"INSERT INTO bin VALUES (NULL,?1)",
   "p":[
-        [ { "type":"blob", "encoding":"base64", "value": "dGVzdA=="} ]
+        [
+          { "type":"blob", "encoding":"base64", "value": "dGVzdA=="}
+        ]
       ]
 }
