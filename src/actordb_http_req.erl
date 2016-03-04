@@ -63,7 +63,7 @@ content_types_provided(Req, State) ->
 from_json(Req, State) ->
 	{ok, Body, Req1} = cowboy_req:body(Req),
 	Json = jiffy:decode(Body,[return_maps]),
-	case actordb_http_exec:handle_req(Json, Req1, State) of
+	case actordb_http_exec:req(Json, Req1, State#req_state{ data_type = json }) of
     {error, _} ->
       Req2 = ?REPLY(400, <<>>, Req1),
       {stop, Req2, State};
@@ -74,7 +74,7 @@ from_json(Req, State) ->
   end.
 
 to_json(Req, State) ->
-	case actordb_http_exec:handle_resp(Req, State) of
+	case actordb_http_exec:resp(Req, State#req_state{ data_type = json }) of
     {error, _} ->
       Req1 = ?REPLY(400, <<>>, Req),
       {stop, Req1, State};
@@ -87,7 +87,7 @@ from_msgpack(Req, State) ->
   {ok, BodyPacked, Req1} = cowboy_req:body(Req),
   case msgpack:unpack(BodyPacked) of
     {ok, Unpacked} ->
-      case actordb_http_exec:handle_req(Unpacked, Req1, State) of
+      case actordb_http_exec:req(Unpacked, Req1, State#req_state{ data_type = msgpack }) of
         {error, _} ->
           Req2 = ?REPLY(400, <<>>, Req1),
           {stop, Req2, State};
@@ -105,7 +105,7 @@ from_msgpack(Req, State) ->
 
 
 to_msgpack(Req, State) ->
-  case actordb_http_exec:handle_resp(Req, State) of
+  case actordb_http_exec:resp(Req, State#req_state{ data_type = msgpack }) of
     {error, _} ->
       Req1 = ?REPLY(400, <<>>, Req),
       {stop, Req1, State};

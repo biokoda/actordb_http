@@ -9,4 +9,4 @@
 
 -define(B(X), butil:tobin(X)).
 
--record(req_state,{ peer = undefined, path = undefined, opts = [], pool = undefined }).
+-record(req_state,{ peer = undefined, path = undefined, opts = [], pool = undefined, data_type = undefined }).
