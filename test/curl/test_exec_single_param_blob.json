@@ -1,0 +1,7 @@
+{
+  "id":"123",
+  "type":"type1",
+  "flags":["create"],
+	"q":"SELECT * FROM bin WHERE id = ?1;",
+  "p":[ [ 11 ] ]
+}

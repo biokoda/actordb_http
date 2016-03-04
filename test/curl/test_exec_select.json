@@ -1,0 +1,3 @@
+{
+	"q":"ACTOR type1(123) CREATE; SELECT * FROM tab1;"
+}

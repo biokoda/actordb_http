@@ -1,0 +1,6 @@
+{
+  "ids":["123","234","456"],
+  "type":"type1",
+  "flags":["create"],
+	"q":"{{RESULT}} SELECT * FROM tab1 WHERE id = 1 OR id = 2;"
+}

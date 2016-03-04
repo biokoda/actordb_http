@@ -16,6 +16,7 @@
 -export([exec_sql/2, exec_sql/3]).
 -export([exec_single/5, exec_single/6]).
 -export([exec_single_param/6, exec_single_param/7]).
+-export([exec_multi/5, exec_multi/6]).
 
 -record(state, { user, bp }).
 
@@ -77,6 +78,11 @@ handle_call({exec_single, Actor, Type, Flags, Sql, Opts}, _, State) ->
 handle_call({exec_single_param, Actor, Type, Flags, Sql, BindingVals, Opts}, _, State) ->
   Bp = handle_bp(State),
   Result = (catch actordb:exec_bp(Bp, Actor, Type, flags(Flags), Sql, bindings(BindingVals))),
+  {reply, db_res(Sql, Result, Opts), State};
+
+handle_call({exec_multi, Actors, Type, Flags, Sql, Pool, Opts}, _, State) ->
+  Bp = handle_bp(State),
+  Result = (catch actordb:exec_bp(Bp, Actors, Type, flags(Flags), Sql)),
   {reply, db_res(Sql, Result, Opts), State};
 
 handle_call(_Request, _From, State) ->
@@ -144,6 +150,11 @@ exec_single_param(Actor, Type, Flags, Sql, BindingVals, Pool) ->
   exec_single_param(Actor, Type, Flags, Sql, BindingVals, Pool, []).
 exec_single_param(Actor, Type, Flags, Sql, BindingVals, Pool, Opts) ->
   execute_call({exec_single_param, Actor, Type, Flags, Sql, BindingVals, Opts}, Pool).
+
+exec_multi(Actors, Type, Flags, Sql, Pool) ->
+  exec_multi(Actors, Type, Flags, Sql, Pool, []).
+exec_multi(Actors, Type, Flags, Sql, Pool, Opts) ->
+  execute_call({exec_multi, Actors, Type, Flags, Sql, Pool, Opts}, Pool).
 
 %% @private
 execute_call(Message, Pool) ->

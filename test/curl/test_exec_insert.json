@@ -1,0 +1,3 @@
+{
+	"q":"ACTOR type1(123) CREATE; INSERT INTO tab1 VALUES (NULL, 'text');"
+}

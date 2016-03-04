@@ -51,6 +51,8 @@ exec(<<"exec_single">>, Json, Pool) ->
   exec_single(Json, Pool);
 exec(<<"exec_single_param">>, Json, Pool) ->
   exec_single_param(Json, Pool);
+exec(<<"exec_multi">>, Json, Pool) ->
+  exec_multi(Json, Pool);
 exec(Typ, _, _) ->
   {error, {bad_exec_type,Typ}}.
 
@@ -74,6 +76,13 @@ exec_single_param(#{<<"id">> := Actor, <<"flags">> := Flags, <<"type">> := Type,
   query_response(R);
 exec_single_param(_,_) ->
   {error, bad_exec_single_param_data}.
+
+exec_multi(#{<<"ids">> := Actors, <<"flags">> := Flags, <<"type">> := Type, <<"q">> := Sql}, Pool) ->
+  lager:debug("exec_multi, ids=~p flags=~p type=~p bindings=~p sql=~p",[Actors, Flags, Type, Sql]),
+  R = actordb_http_worker:exec_multi(Actors, Type, Flags, Sql, Pool, [blob2base64]),
+  query_response(R);
+exec_multi(_, _) ->
+  {error, bad_exec_multi_data}.
 
 query_response(R) ->
   lager:debug("reply=~p",[R]),

@@ -1,0 +1,6 @@
+{
+  "id":"123",
+  "type":"type1",
+  "flags":["create"],
+	"q":"SELECT * FROM tab1 WHERE id = 1 OR id = 2;"
+}
