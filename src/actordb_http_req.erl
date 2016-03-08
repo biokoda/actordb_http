@@ -35,11 +35,13 @@ is_authorized(Req, State) ->
 		{basic, User, Pw} ->
       case actordb_http_sup:ensure_pool(?B(User), ?B(Pw)) of
         {error, invalid_login} ->
+          lager:error("error authorizing user=~p",[User]),
           {{false, <<"Basic realm=\"actordb\"">>}, Req, State};
         true ->
           {true, Req, State#req_state{ pool = actordb_http_sup:pool_for(User) }}
       end;
 		_ ->
+      lager:error("error authorizing user, missing authorization headers or no data"),
 			{{false, <<"Basic realm=\"actordb\"">>}, Req, State}
 	end.
 
@@ -62,6 +64,7 @@ content_types_provided(Req, State) ->
 
 from_json(Req, State) ->
 	{ok, Body, Req1} = cowboy_req:body(Req),
+  lager:debug("~p",[Body]),
 	Json = jiffy:decode(Body,[return_maps]),
 	case actordb_http_exec:req(Json, Req1, State#req_state{ data_type = json }) of
     {error, _} ->
@@ -111,5 +114,7 @@ to_msgpack(Req, State) ->
       {stop, Req1, State};
     {reply, Reply} ->
       MsgPacked = msgpack:pack(Reply),
+      lager:info("-> unpacked ~p",[Reply]),
+      lager:info("-> packed ~p",[MsgPacked]),
       {MsgPacked, Req, State}
   end.

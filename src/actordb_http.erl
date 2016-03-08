@@ -4,7 +4,6 @@
 -module(actordb_http).
 
 -include_lib("actordb_http/include/actordb_http.hrl").
--include_lib("actordb_http/include/actordb_http_types.hrl").
 
 -behaviour(application).
 

@@ -9,3 +9,4 @@ ebin
 .rebar
 rebar
 .DS_Store
+node_modules

@@ -202,7 +202,7 @@ val({blob,V}, Opts) ->
     true ->
       #{ <<"type">> => <<"blob">>, <<"encoding">> => <<"base64">>, <<"value">> => base64:encode(V)};
     false ->
-      #{ <<"type">> => <<"blob">>, <<"encoding">> => <<"none">>, <<"value">> => base64:encode(V)};
+      #{ <<"type">> => <<"blob">>, <<"encoding">> => <<"none">>, <<"value">> => base64:encode(V)}
   end;
 val(undefined,_) ->
 	null;
